@@ -3,27 +3,145 @@ import tkinter as tk
 
 
 class GameObject(object):
-    """Kelas dasar (parent class) untuk semua objek dalam game."""
+    """Kelas dasar untuk semua objek dalam game."""
 
     def __init__(self, canvas, item):
         self.canvas = canvas
         self.item = item
 
     def get_position(self):
-        """Mengambil koordinat objek [x1, y1, x2, y2]."""
         return self.canvas.coords(self.item)
 
     def move(self, x, y):
-        """Menggeser posisi objek sejauh x dan y."""
         self.canvas.move(self.item, x, y)
 
     def delete(self):
-        """Menghapus objek dari canvas."""
         self.canvas.delete(self.item)
 
 
+class AnimatedRocket:
+    """Animasi Roket melayang di latar belakang dengan jejak api."""
+
+    def __init__(self, canvas, x, y):
+        self.canvas = canvas
+        self.x = x
+        self.y = y
+        self.speed = 1.2
+
+        # Badan roket
+        self.body = canvas.create_polygon(
+            x,
+            y - 25,
+            x - 12,
+            y + 15,
+            x + 12,
+            y + 15,
+            fill="#ecf0f1",
+            outline="#bdc3c7",
+            tags="bg_rocket",
+        )
+        # Jendela roket
+        self.window = canvas.create_oval(
+            x - 5,
+            y - 8,
+            x + 5,
+            y + 2,
+            fill="#3498db",
+            outline="#2980b9",
+            tags="bg_rocket",
+        )
+        # Sayap kiri & kanan
+        self.wing_left = canvas.create_polygon(
+            x - 12,
+            y + 5,
+            x - 20,
+            y + 20,
+            x - 12,
+            y + 15,
+            fill="#e74c3c",
+            tags="bg_rocket",
+        )
+        self.wing_right = canvas.create_polygon(
+            x + 12,
+            y + 5,
+            x + 20,
+            y + 20,
+            x + 12,
+            y + 15,
+            fill="#e74c3c",
+            tags="bg_rocket",
+        )
+        # Api roket
+        self.flame = canvas.create_polygon(
+            x - 6,
+            y + 15,
+            x,
+            y + 30,
+            x + 6,
+            y + 15,
+            fill="#f1c40f",
+            outline="#e67e22",
+            tags="bg_rocket",
+        )
+
+        # Pastikan posisi roket di paling belakang canvas
+        canvas.tag_lower("bg_rocket")
+
+    def update(self, canvas_height, canvas_width):
+        """Membuat roket meluncur ke atas secara berkala."""
+        self.y -= self.speed
+        if self.y < -40:
+            self.y = canvas_height + 40
+            self.x = random.randint(50, canvas_width - 50)
+
+        # Efek api berkelip
+        flame_color = random.choice(["#f1c40f", "#e67e22", "#e74c3c"])
+        self.canvas.itemconfig(self.flame, fill=flame_color)
+
+        # Perbarui posisi koordinat
+        self.canvas.coords(
+            self.body,
+            self.x,
+            self.y - 25,
+            self.x - 12,
+            self.y + 15,
+            self.x + 12,
+            self.y + 15,
+        )
+        self.canvas.coords(
+            self.window, self.x - 5, self.y - 8, self.x + 5, self.y + 2
+        )
+        self.canvas.coords(
+            self.wing_left,
+            self.x - 12,
+            self.y + 5,
+            self.x - 20,
+            self.y + 20,
+            self.x - 12,
+            self.y + 15,
+        )
+        self.canvas.coords(
+            self.wing_right,
+            self.x + 12,
+            self.y + 5,
+            self.x + 20,
+            self.y + 20,
+            self.x + 12,
+            self.y + 15,
+        )
+        self.canvas.coords(
+            self.flame,
+            self.x - 6,
+            self.y + 15,
+            self.x,
+            self.y + 30,
+            self.x + 6,
+            self.y + 15,
+        )
+        self.canvas.tag_lower("bg_rocket")
+
+
 class Laser(GameObject):
-    """Kelas untuk peluru laser pesawat."""
 
     def __init__(self, canvas, x, y):
         item = canvas.create_rectangle(
@@ -32,19 +150,17 @@ class Laser(GameObject):
         super(Laser, self).__init__(canvas, item)
 
     def update(self):
-        """Menggerakkan laser ke atas."""
         self.move(0, -16)
 
 
 class Boss(GameObject):
-    """Kelas untuk Boss Alien di akhir level."""
 
     def __init__(self, canvas, width):
         self.width = 160
         self.height = 40
-        self.hp = 25
-        self.max_hp = 25
-        self.direction = 2
+        self.hp = 30
+        self.max_hp = 30
+        self.direction = 3
 
         item = canvas.create_rectangle(
             width / 2 - 80,
@@ -56,7 +172,11 @@ class Boss(GameObject):
             width=3,
         )
         self.hp_text = canvas.create_text(
-            width / 2, 60, text=f"BOSS HP: {self.hp}", fill="white", font=("Courier", 12, "bold")
+            width / 2,
+            60,
+            text=f"BOSS HP: {self.hp}",
+            fill="white",
+            font=("Courier", 12, "bold"),
         )
         super(Boss, self).__init__(canvas, item)
 
@@ -79,12 +199,11 @@ class Boss(GameObject):
 
 
 class Ball(GameObject):
-    """Kelas untuk mengelola Meteor / Bola Energi."""
 
-    def __init__(self, canvas, x, y):
+    def __init__(self, canvas, x, y, speed=8):
         self.radius = 10
         self.direction = [random.choice([1, -1]), -1]
-        self.speed = 8
+        self.speed = speed
         self.is_fireball = False
         self.brick_streak = 0
 
@@ -174,13 +293,12 @@ class Ball(GameObject):
 
 
 class Paddle(GameObject):
-    """Kelas untuk mengontrol Pesawat Luar Angkasa dengan kecepatan tinggi & super mulus."""
 
     def __init__(self, canvas, x, y):
         self.width = 90
         self.height = 12
         self.ball = None
-        self.speed = 16  # Ditingkatkan agar pergerakan jauh lebih cepat & lincah!
+        self.speed = 16
         self.direction_x = 0
 
         item = canvas.create_rectangle(
@@ -203,14 +321,16 @@ class Paddle(GameObject):
             current_width = coords[2] - coords[0]
             if current_width < 140:
                 self.canvas.coords(
-                    self.item, coords[0] - 20, coords[1], coords[2] + 20, coords[3]
+                    self.item,
+                    coords[0] - 20,
+                    coords[1],
+                    coords[2] + 20,
+                    coords[3],
                 )
 
     def update_position(self, canvas_width):
-        """Memperbarui posisi pesawat secara kontinu tanpa jeda patah-patah."""
         if self.direction_x == 0:
             return
-
         coords = self.get_position()
         if not coords:
             return
@@ -223,7 +343,6 @@ class Paddle(GameObject):
 
 
 class PowerUp(GameObject):
-    """Kapsul Upgrade / Addon."""
 
     def __init__(self, canvas, x, y, game_ref, p_type):
         self.width = 24
@@ -252,8 +371,6 @@ class PowerUp(GameObject):
 
 
 class Brick(GameObject):
-    """Kelas untuk Asteroid / Blok Target."""
-
     COLORS = {1: "#e74c3c", 2: "#e67e22", 3: "#f1c40f", 4: "#9b59b6"}
 
     def __init__(self, canvas, x, y, hits, shield, brick_type, game_ref):
@@ -334,7 +451,6 @@ class Brick(GameObject):
 
 
 class Game(tk.Frame):
-    """Kelas utama pengatur alur game galaksi."""
 
     def __init__(self, master):
         super(Game, self).__init__(master)
@@ -342,6 +458,8 @@ class Game(tk.Frame):
         self.score = 0
         self.high_score = 0
         self.combo = 1
+        self.level = 1  # Fitur Level Baru
+        self.max_levels = 3
         self.width = 610
         self.height = 400
 
@@ -351,12 +469,8 @@ class Game(tk.Frame):
         self.canvas.pack()
         self.pack()
 
-        for _ in range(50):
-            bx = random.randint(5, self.width - 5)
-            by = random.randint(5, self.height - 5)
-            self.canvas.create_oval(
-                bx, by, bx + 2, by + 2, fill="white", outline=""
-            )
+        # Inisialisasi Roket Animasi di Latar Belakang
+        self.rocket = AnimatedRocket(self.canvas, 100, 350)
 
         self.items = {}
         self.balls = []
@@ -367,21 +481,24 @@ class Game(tk.Frame):
         self.laser_timer = 0
         self.shield_active = False
         self.shield_item = None
+        self.overlay_text = (
+            None  # Menyimpan id teks judul agar mudah dihapus/di-clear
+        )
 
         self.paddle = Paddle(self.canvas, self.width / 2, 360)
         self.items[self.paddle.item] = self.paddle
 
         self.game_running = False
-        self.building_bricks()
+        self.building_bricks_for_level()
 
         self.hud_score = None
         self.hud_lives = None
         self.hud_combo = None
+        self.hud_level = None
 
         self.setup_game()
 
         self.canvas.focus_set()
-        # Kontrol tombol responsif super mulus (Key Press & Key Release)
         self.canvas.bind(
             "<KeyPress-Left>", lambda _: self.set_paddle_direction(-1)
         )
@@ -398,15 +515,55 @@ class Game(tk.Frame):
         self.canvas.bind("r", lambda _: self.restart_game())
         self.canvas.bind("R", lambda _: self.restart_game())
 
-    def building_bricks(self):
+    def building_bricks_for_level(self):
+        """Membuat susunan brick yang berbeda di tiap levelnya."""
         types = ["normal", "bomb", "mystery"]
-        for x in range(5, self.width - 5, 75):
-            b_type1 = random.choice(types) if x % 150 == 0 else "normal"
-            b_type2 = random.choice(types) if x % 225 == 0 else "normal"
-            self.add_brick(x + 37.5, 35, 2, shield=True, brick_type="normal")
-            self.add_brick(x + 37.5, 58, 3, shield=False, brick_type=b_type1)
-            self.add_brick(x + 37.5, 81, 2, shield=False, brick_type="normal")
-            self.add_brick(x + 37.5, 104, 1, shield=False, brick_type=b_type2)
+
+        if self.level == 1:
+            for x in range(5, self.width - 5, 75):
+                self.add_brick(
+                    x + 37.5, 40, 2, shield=False, brick_type="normal"
+                )
+                self.add_brick(
+                    x + 37.5, 65, 1, shield=False, brick_type="normal"
+                )
+                self.add_brick(
+                    x + 37.5, 90, 1, shield=False, brick_type="normal"
+                )
+
+        elif self.level == 2:
+            for x in range(5, self.width - 5, 75):
+                b_type = random.choice(types) if x % 150 == 0 else "normal"
+                self.add_brick(
+                    x + 37.5, 35, 3, shield=True, brick_type="normal"
+                )
+                self.add_brick(x + 37.5, 58, 2, shield=False, brick_type=b_type)
+                self.add_brick(
+                    x + 37.5, 81, 2, shield=False, brick_type="normal"
+                )
+                self.add_brick(
+                    x + 37.5, 104, 1, shield=False, brick_type="normal"
+                )
+
+        elif self.level == 3:
+            for x in range(5, self.width - 5, 75):
+                b_type1 = random.choice(types) if x % 150 == 0 else "normal"
+                b_type2 = random.choice(types) if x % 225 == 0 else "normal"
+                self.add_brick(
+                    x + 37.5, 35, 3, shield=True, brick_type="normal"
+                )
+                self.add_brick(
+                    x + 37.5, 58, 3, shield=False, brick_type=b_type1
+                )
+                self.add_brick(
+                    x + 37.5, 81, 2, shield=True, brick_type="normal"
+                )
+                self.add_brick(
+                    x + 37.5, 104, 1, shield=False, brick_type=b_type2
+                )
+                self.add_brick(
+                    x + 37.5, 127, 1, shield=False, brick_type="normal"
+                )
 
     def trigger_bomb(self, brick_obj):
         coords = brick_obj.get_position()
@@ -461,42 +618,72 @@ class Game(tk.Frame):
         if self.hud_score:
             self.canvas.itemconfig(
                 self.hud_score,
-                text=f"Score: {self.score} (Hi: {self.high_score})",
+                text=f"Score:{self.score} (Hi:{self.high_score})",
             )
         if self.hud_lives:
-            self.canvas.itemconfig(self.hud_lives, text=f"Shields: {self.lives}")
+            self.canvas.itemconfig(self.hud_lives, text=f"Shields:{self.lives}")
         if self.hud_combo:
+            self.canvas.itemconfig(self.hud_combo, text=f"Combo:{self.combo}x")
+        if self.hud_level:
             self.canvas.itemconfig(
-                self.hud_combo, text=f"Combo: {self.combo}x"
+                self.hud_level, text=f"Level:{self.level}/{self.max_levels}"
             )
+
+    def clear_overlay_text(self):
+        """Menghapus teks instruksi/judul agar tidak bertumpukan di tengah layar."""
+        if self.overlay_text:
+            self.canvas.delete(self.overlay_text)
+            self.overlay_text = None
 
     def setup_game(self):
         self.clear_all_balls()
         self.clear_powerups()
         self.clear_lasers()
+        self.clear_overlay_text()
         self.has_laser = False
         self.add_ball()
 
         if not self.hud_score:
             self.hud_score = self.canvas.create_text(
-                110, 20, text=f"Score: 0 (Hi: 0)", fill="#00ffff", font=("Courier", 11, "bold")
+                90,
+                15,
+                text=f"Score:0 (Hi:0)",
+                fill="#00ffff",
+                font=("Courier", 10, "bold"),
             )
             self.hud_lives = self.canvas.create_text(
-                280, 20, text=f"Shields: {self.lives}", fill="#00ffff", font=("Courier", 11, "bold")
+                240,
+                15,
+                text=f"Shields:{self.lives}",
+                fill="#00ffff",
+                font=("Courier", 10, "bold"),
             )
             self.hud_combo = self.canvas.create_text(
-                450, 20, text=f"Combo: 1x", fill="#00ffff", font=("Courier", 11, "bold")
+                370,
+                15,
+                text=f"Combo:1x",
+                fill="#00ffff",
+                font=("Courier", 10, "bold"),
+            )
+            self.hud_level = self.canvas.create_text(
+                510,
+                15,
+                text=f"Level:{self.level}/{self.max_levels}",
+                fill="#00ffff",
+                font=("Courier", 10, "bold"),
             )
         else:
             self.update_hud()
 
-        self.text = self.canvas.create_text(
+        # Tampilkan judul menu
+        self.overlay_text = self.canvas.create_text(
             300,
             200,
-            text="ULTIMATE SPACE ARCADE\nPress Space to Launch\n(Press 'R' to Restart)",
+            text=f"LEVEL {self.level}\nPress Space to Launch\n(Press 'R' to Restart)",
             fill="#00ffff",
             font=("Courier", 18, "bold"),
             justify="center",
+            tags="menu_text",
         )
 
     def clear_all_balls(self):
@@ -518,13 +705,16 @@ class Game(tk.Frame):
         paddle_coords = self.paddle.get_position()
         if paddle_coords:
             x = (paddle_coords[0] + paddle_coords[2]) * 0.5
-            ball = Ball(self.canvas, x, 345)
+            ball_speed = 8 + (self.level - 1) * 2  # Kecepatan bola bertambah tiap naik level
+            ball = Ball(self.canvas, x, 345, speed=ball_speed)
             self.balls.append(ball)
             self.paddle.set_ball(ball)
             self.items[ball.item] = ball
 
     def spawn_extra_ball(self, x, y):
-        extra_ball = Ball(self.canvas, x, y)
+        extra_ball = Ball(
+            self.canvas, x, y, speed=8 + (self.level - 1) * 2
+        )
         extra_ball.direction = [random.choice([1, -1]), 1]
         self.balls.append(extra_ball)
         self.items[extra_ball.item] = extra_ball
@@ -538,24 +728,37 @@ class Game(tk.Frame):
         self.items[brick.item] = brick
 
     def start_game(self):
-        self.canvas.delete(self.text)
+        self.clear_overlay_text()  # Bersihkan teks judul agar tidak menghalangi game saat main
         self.paddle.ball = None
         self.game_running = True
         self.game_loop()
+
+    def next_level(self):
+        """Pindah ke level berikutnya."""
+        self.level += 1
+        self.game_running = False
+        self.clear_all_balls()
+        self.clear_powerups()
+        self.clear_lasers()
+        self.items.clear()
+        self.canvas.delete("brick")
+
+        self.paddle = Paddle(self.canvas, self.width / 2, 360)
+        self.items[self.paddle.item] = self.paddle
+
+        self.building_bricks_for_level()
+        self.setup_game()
 
     def restart_game(self):
         self.lives = 3
         self.score = 0
         self.combo = 1
+        self.level = 1
         self.game_running = False
         self.canvas.delete("all")
 
-        for _ in range(50):
-            bx = random.randint(5, self.width - 5)
-            by = random.randint(5, self.height - 5)
-            self.canvas.create_oval(
-                bx, by, bx + 2, by + 2, fill="white", outline=""
-            )
+        # Inisialisasi ulang roket animasi
+        self.rocket = AnimatedRocket(self.canvas, 100, 350)
 
         self.items = {}
         self.balls = []
@@ -567,26 +770,35 @@ class Game(tk.Frame):
         self.hud_score = None
         self.hud_lives = None
         self.hud_combo = None
+        self.hud_level = None
+        self.overlay_text = None
 
         self.paddle = Paddle(self.canvas, self.width / 2, 360)
         self.items[self.paddle.item] = self.paddle
 
-        self.building_bricks()
+        self.building_bricks_for_level()
         self.setup_game()
 
     def defeat_boss(self):
         self.boss = None
         self.game_running = False
-        self.canvas.create_text(
-            300, 200, text="MISSION SUCCESS!\nYOU DEFEATED THE BOSS!\nPress 'R' to Replay",
-            fill="#f39c12", font=("Courier", 22, "bold"), justify="center", tags="win"
+        self.clear_overlay_text()
+        self.overlay_text = self.canvas.create_text(
+            300,
+            200,
+            text="VICTORY!\nYOU DEFEATED THE FINAL BOSS!\nPress 'R' to Replay",
+            fill="#f39c12",
+            font=("Courier", 20, "bold"),
+            justify="center",
         )
 
     def game_loop(self):
         if not self.game_running:
             return
 
-        # Perbarui posisi pesawat setiap frame agar sangat responsif & mulus
+        # Animasi roket di latar belakang
+        self.rocket.update(self.height, self.width)
+
         self.paddle.update_position(self.width)
         self.check_collisions()
 
@@ -671,23 +883,32 @@ class Game(tk.Frame):
 
         num_bricks = len(self.canvas.find_withtag("brick"))
 
+        # Logika naik level atau spawn Boss
         if num_bricks == 0 and not self.boss and self.lives >= 0:
-            self.boss = Boss(self.canvas, self.width)
+            if self.level < self.max_levels:
+                self.next_level()
+                return
+            else:
+                self.boss = Boss(self.canvas, self.width)
 
         if len(self.balls) == 0:
             self.lives -= 1
             self.update_hud()
             if self.lives < 0:
                 self.game_running = False
-                self.canvas.create_text(
-                    300, 200, text="GAME OVER!\nPress 'R' to Retry",
-                    fill="#ff3333", font=("Courier", 24, "bold"), justify="center"
+                self.clear_overlay_text()
+                self.overlay_text = self.canvas.create_text(
+                    300,
+                    200,
+                    text="GAME OVER!\nPress 'R' to Retry",
+                    fill="#ff3333",
+                    font=("Courier", 24, "bold"),
+                    justify="center",
                 )
             else:
                 self.game_running = False
                 self.after(1000, self.setup_game)
         else:
-            # Jeda game loop dipercepat menjadi 15ms untuk kelancaran maksimal (framerate tinggi)
             self.after(15, self.game_loop)
 
     def check_collisions(self):
@@ -707,6 +928,6 @@ class Game(tk.Frame):
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("Space Arcade - Ultra Smooth & Fast Paddle Edition")
+    root.title("Space Arcade - Rocket Edition & Level Progression")
     game = Game(root)
     game.mainloop()
